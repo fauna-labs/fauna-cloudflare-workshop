@@ -2,11 +2,11 @@
 
 In our application, a user can create many videos. Therefore we have a one-to-many relationship between users and videos.
 
-![Untitled](Data%20Relationship%20633c53255e314862a0d993258d69f74e/Untitled.png)
+![Data relationships](https://workshop-shadid.s3.amazonaws.com/cffqlx/1-data-relationships.png)
 
 A user is also able to share videos with other users. We can create a many-to-many relationship between the `User` and `Permission` collections. A record in the `Permission` collection has a reference (left join) to a record in the User collection and another reference (right join) to a record in the Video collection.
 
-![Untitled](Data%20Relationship%20633c53255e314862a0d993258d69f74e/Untitled%201.png)
+![Video collection](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-data-relationships-video.png)
 
 ### one-to-many
 
