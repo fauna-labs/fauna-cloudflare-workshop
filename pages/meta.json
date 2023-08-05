@@ -1,5 +1,9 @@
 {
   "index": "Introduction",
-  "one": "Ch 1: Building a Simple Full Stack Application",
-  "two": "Ch 2: Database operations from Pages Functions"
+  "application-architecture": "Application Architecture",
+  "getting-started": "Getting Started",
+  "implementing-video-recording": "Implementing Video Recording",
+  "user-authentication": "User Authentication",
+  "data-relationships": "Data Relationships",
+  "putting-it-all-together": "Putting It All Together"
 }

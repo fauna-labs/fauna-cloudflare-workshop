@@ -1,0 +1,542 @@
+# User Authentication
+
+It is time to add the user authentication features; known users will be able to create and account, create and post videos, and share those videos with other users. 
+
+Also, we want the users to have fine-grained access control to the database resources. A user will only have access to videos he/she has permission to view. You can define permissions, similar similar to what you would do with Dropbox assets or Google Docs. To achieve this we will leverage Fauna’s [attribute-based access control](https://fqlx-beta--fauna-docs.netlify.app/fqlx/beta/cookbook/security/abac/) (ABAC) features.
+
+## Creating the Signup functionality
+
+First, we will create a signup page. Create a new file `src/app/signup/page.js` and add the following code. 
+
+```jsx
+// src/app/signup/page.js
+'use client'
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import styles from './page.module.css';
+
+export default function SignUp() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // TODO - create user in Fauna
+  };
+
+  const redirectToLogin = (e) => {
+    e.preventDefault();
+    router.push("/login")
+  }
+
+  return (
+    <div className={styles.wrapContainer}>
+      <h3 className={styles.h3}>Sign Up</h3>
+      <form onSubmit={handleSubmit} className={styles.formStyle}>
+        <label className={styles.label}>E-mail</label>
+        <input type="email" value={email} onChange={handleEmailChange} required className={styles.inputStyle}/>
+        <label className={styles.label}>Password</label>
+        <input type="password" value={password} onChange={handlePasswordChange} required className={styles.inputStyle}/>
+        <button type="submit" className={styles.button}>Submit</button>
+      </form>
+
+      <div className={styles.bottomContainer}>
+        <p className={styles.p}>Already have an account?</p>
+        <button onClick={redirectToLogin} className={styles.buttonSecondary}>Log In</button>
+      </div>
+    </div>
+  );
+}
+```
+
+`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/806a6a1bb279f227a91dbd7d38f82215f8f40393/src/app/signup/page.js)*`
+
+The code above presents a form to capture user’s email and password for a signup process. It uses Next.js's `useRouter` hook to navigate between pages, and React's `useState` hook to manage the state of email and password inputs.
+
+***🔖 Optional:*** Create a new CSS file `src/app/signup/page.module.css` to add some styles to this component. You can find the content of the CSS in [this link](https://github.com/fauna-labs/video-sharing/blob/806a6a1bb279f227a91dbd7d38f82215f8f40393/src/app/signup/page.module.css).
+
+Run your application with `npm run dev` command. Visit `[http://localhost:3000/signup](http://localhost:3000/signup)` and make sure the signup page is displaying as expected. 
+
+![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled.png)
+
+Next, add the Fauna configuration to this component. 
+
+```jsx
+'use client'
+...
+**import { Client, fql } from 'fauna';**
+
+export default function SignUp() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  **const client = new Client({
+    secret: process.env.NEXT_PUBLIC_FAUNA_KEY
+  });**
+
+  // ... rest of the code
+
+  return (
+    <div className={styles.wrapContainer}>
+      ...
+    </div>
+  );
+}
+```
+
+The `handleSubmit` function runs on form submission. When the form is submitted, we'll create a new database query to create a user in the `User` collection. Make the following update to `handleSubmit` function.
+
+```jsx
+const handleSubmit = (e) => {
+    e.preventDefault();
+    client.query(fql`
+        let user = User.create({ email: ${email} })
+        Credentials.create({ document: user, password: ${password} })
+    `)
+    .then((response) => {
+        console.log('response', response.data)
+    })
+    .catch((error) => {
+        console.log('error', error)
+    })
+ };
+```
+
+Note that we are using the `Credentials.create` function inside our FQL block. The `[Credentials](https://fqlx-beta--fauna-docs.netlify.app/fqlx/beta/reference/auth/credentials/)` collection is a built-in collection in Fauna that is used to store sensitive information. 
+
+Try registering a new user and verify that the user is created in the User collection.
+
+`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/commit/101621508d9357024ef090dbe2153a8f91acd1d8)*`
+
+### User Defined Function (UDF)
+
+A User-Defined Function, or UDF, is a database feature that allows you to create custom functions in the database layer. Like stored procedures in SQL databases, UDFs extend the functionality of the database engine.
+UDFs are helpful for code modularization, reusability, and applying additional security rules.
+We can turn the signup logic into a custom function in the database. That way, maintaining and applying fine-grained access will be easier.
+
+Head back to your Fauna dashboard and run the following code in your web shell to create a  UDF called `Signup`: 
+
+```jsx
+Function.create({
+  name: "Signup",
+  body: "(email, password) => {
+    let user = User.create({ email: email })
+    Credentials.create({ document: user, password: password })
+  }",
+  role: "server"
+})
+```
+
+![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%201.png)
+
+Notice, a new function is added in the resources tab in the left menu.
+
+Now we can update the `handleSubmit` function to use this UDF. 
+
+```jsx
+const handleSubmit = (e) => {
+    e.preventDefault();
+    client.query(fql`
+        Signup(${email}, ${password})
+    `)
+    .then((response) => {
+        console.log('response', response.data)
+    })
+    .catch((error) => {
+        console.log('error', error)
+    })
+ };
+```
+
+## Creating the Login functionality
+
+Now that we can add users to our application, let’s create the Login functionality for existing users. We will create a new Next.js page component for our Login page. Create a new file `src/app/login/page.js` and add the following code. 
+
+```jsx
+'use client'
+import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { Client, fql } from "fauna";
+import styles from '../signup/page.module.css';
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const client = new Client({
+    secret: process.env.NEXT_PUBLIC_FAUNA_KEY
+  });
+
+  const [invalidPassword, setInvalidPassword] = useState(false);
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // TODO: Query the database for the user with the given email and password
+  };
+
+  const redirectToSignup = (e) => {
+    e.preventDefault();
+    router.push("/signup")
+  }
+
+  return (
+    <div className={styles.wrapContainer}>
+      <h3 className={styles.h3}>Log In</h3>
+      <form onSubmit={handleSubmit} className={styles.formStyle}>
+        <label className={styles.label}>E-mail</label>
+        <input type="email" value={email} onChange={handleEmailChange} required className={styles.inputStyle}/>
+        <label className={styles.formStyle}>Password</label>
+        <input type="password" value={password} onChange={handlePasswordChange} required className={styles.inputStyle}/>
+        <button type="submit" className={styles.button}>Submit</button>
+      </form>
+
+      <div className={styles.bottomContainer}>
+        <p className={styles.p}>Don't have an account?</p>
+        <button onClick={redirectToSignup} className={styles.buttonSecondary}>Sign Up</button>
+      </div>
+    </div>
+  );
+}
+```
+
+The code above creates a new Next.js page route for login. The login page presents a login form to a user. The form takes in an email and password, managed with React's `useState` hook. It also has a function to handle form submission (with the `handleSubmit` ****function). 
+
+Make sure your application is running. Visit [http://localhost:3000/login](http://localhost:3000/login) to verify the login page is displaying as expected.
+
+![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%202.png)
+
+Next, let's implement the `handleSubmit` functionality.
+
+```jsx
+const handleSubmit = (e) => {
+    e.preventDefault();
+    client.query(fql`
+        let user = User.where(.email == ${email}).first()
+        let cred = Credentials.byDocument(user).login(${password})
+        let result = {
+            user: user,
+            cred: cred 
+        }
+        result 
+    `)
+    .then((response) => {
+        console.log('response', response.data)
+    })
+    .catch((error) => {
+        console.log('error', error)
+        setInvalidPassword(true)
+    })
+  };
+```
+
+The `handleSubmit` function now handles the form submission event for the login form. When the form is submitted, it sends a Fauna Query Language (FQL) query via the client object to the Fauna database to fetch the first user whose email matches the email input. It then attempts to log in with the provided password using the login method on the user's credentials.
+
+Once the login is successful, we want to store all the user information in the local storage. Update the `handleSubmit` function as follows.
+
+```jsx
+const handleSubmit = (e) => {
+    e.preventDefault();
+    client.query(fql`
+				let user = User.where(.email == ${email}).first()
+        let cred = Credentials.byDocument(user).login(${password})
+        let result = {
+            user: user,
+            cred: cred 
+        }
+        result 
+		`)
+    .then((response) => {
+        **if (!response.data?.user) {
+            setInvalidPassword(true)
+        }
+        const userInfo = {
+            email: response.data.user.email,
+            id: response.data.user.id,
+            key: response.data.cred.secret
+        }
+        window.localStorage.setItem("video-sharing-app", JSON.stringify(userInfo));
+        router.push("/")**
+    })
+    .catch((error) => {
+        console.log('error', error)
+        setInvalidPassword(true)
+    })
+  };
+```
+
+`👩🏻‍💻` 
+
+Note that we are saving the secret that is returned after the user logs in. Fauna can identify a user based on this secret. If we want to make an authenticated request, we pass in this secret instead of the key saved in the environment variable `NEXT_PUBLIC_FAUNA_KEY`.
+
+Try logging in with a user to make sure that the user information is saved in the local storage of your browser.
+
+ 
+
+![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%203.png)
+
+### Restricting Video Access to Only Authenticated Users
+
+At this point, unauthenticated users can signup and log in to our app.  Next, we want to create the permission logic that will allow users to either fetch videos explicitly shared with them, videos they have created, and no other videos. An unauthenticated user has limited permissions and can only call the `Login` and `Signup` UDFs in the database.
+
+We create a new role in our Fauna database to enforce this logic. Head over to the Fauna dashboard and in the web shell run the following FQL code to create a new Role called `NotLoggedIn`.
+
+```jsx
+Role.create({
+  name: "NotLoggedIn",
+  privileges: [
+    {
+      resource: "User",
+      actions: {
+        read: true,
+        create: true
+      }
+    },
+    {
+      resource: "Credential",
+      actions: {
+        read: true
+      }
+    },
+    {
+      resource: "Token",
+      actions: {
+        create: true
+      }
+    }
+  ]
+})
+```
+
+Notice this custom role has a `privileges` array. In this array, we define the specified permission for this role. A user with this role can only register for an account and log in to that account. 
+
+Next, we will create a new secret for this Role by running the following FQL code in the web shell.
+
+```jsx
+Key.create({ role: "NotLoggedIn" }) 
+
+// Running this generates a secret like the following
+// fnA....xxxxx
+```
+
+Copy this key and replace the old server key in `NEXT_PUBLIC_FAUNA_KEY` environment variable with this new key. Now all unauthenticated users in your application will be assuming the `NotLoggedIn` role. An unauthenticated user is not allowed to create a video. Let’s test this out. 
+
+Navigate to [`http://localhost:3000/record`](http://localhost:3000/record) and try creating a new video. Open the network tab in your browser and notice that the request to our Fauna database now returns an error. If we investigate this further we’ll notice that it returns an error: stating there are `Insufficient privileges` to perform the operation.
+
+![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%204.png)
+
+This is expected because the API request uses a key associated with the `NotLoggedIn` role, and that role doesn’t have privileges to create a video.
+Open the `src/app/record/page.js` file and change the Fauna client initialization to use the logged-in user’s key from local storage. Update the code as follows.
+
+```jsx
+// src/app/record/page.js
+export default function Record() {
+
+    **const userInfo = JSON.parse(localStorage?.getItem("video-loggedInUser"));
+    const client = new Client({
+        secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY,
+    });**
+
+    const handleRecordedVid = async (blob) => {
+        console.log('--->', blob)
+        const newVid = await client.query(fql`
+          Video.create({
+            title: ${new Date().toISOString()}
+          })
+        `)
+        console.log('newVid', newVid)
+
+        await fetch(`https://backend.shadidhaque2014.workers.dev/${newVid.data.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'video/webm',
+                'X-Custom-Auth-Key': 'supersecret'
+            },
+            body: blob
+        })
+    }
+    return (
+        <div className={styles.mainWrap}>
+            <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+            <h1>Record Video</h1>
+            <Recorder onRecordedChunks={handleRecordedVid} />
+        </div>
+    )
+} 
+```
+
+Next, we create a new Role for authenticated users and explicitly define what `privileges` an authenticated user has. To do so let’s head back to the Fauna web shell and create a new Role by running the following FQL code. 
+
+```jsx
+Role.create({
+  name: "LoggedIn",
+  privileges: [
+    {
+      resource: "User", 
+      actions: {
+        read: true,
+      }
+    },
+    {
+      resource: "Video",
+      actions: {
+        read: true,
+        create: true,
+        write: true
+      }
+    }
+  ],
+  membership: [
+    {
+      resource: "User"
+    }
+  ]
+})
+```
+
+In the above FQL code, we are creating a new role called `LoggedIn`. Notice that there is a membership array in the code. The membership is set to the `User` collection. This means the `User` collection is the primary collection used to generate the secret key for this role.
+
+Now, if we try to log in with a new user and then create a new video, we will not receive the error from Fauna. When we go check the `Video` collection in Fauna, we notice new documents are added to the `Video` collection. 
+
+At this point, we have basic authentication in place. Next, we add front-end authentication guards to the routes to improve the user experience.
+
+We make the following updates to the code in the `src/app/record/page.js` file.
+
+```jsx
+// src/app/record/page.js
+'use client'
+import Link from 'next/link';
+**import { useRouter } from 'next/navigation';**
+import styles from './recorder.module.css';
+import Recorder from './Recorder';
+import { Client, fql } from "fauna";
+import { useEffect } from 'react';
+
+export default function Record() {
+    **const userInfo = JSON.parse(localStorage?.getItem("video-sharing-app"));
+    const router = useRouter();**
+
+    **useEffect(() => {
+        if (!userInfo) {
+            alert('You must be logged in to record a video')
+            router.push("/login")
+        }
+    }, [])**
+
+    const client = new Client({
+        secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY,
+    });
+
+    const handleRecordedVid = async (blob) => {
+        **try {**
+            const newVid = await client.query(fql`
+                Video.create({
+                    title: ${new Date().toISOString()}
+                })
+            `)
+            console.log('newVid', newVid)
+
+            await fetch(`https://backend.shadidhaque2014.workers.dev/${newVid.data.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'video/webm',
+                    'X-Custom-Auth-Key': 'supersecret'
+                },
+                body: blob
+            })
+        } **catch (error) {
+            console.log('error', error)
+            alert('There was an error uploading your video')
+        }**
+    }
+    return (
+        <div className={styles.mainWrap}>
+            <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+            <h1>Record Video</h1>
+            <Recorder onRecordedChunks={handleRecordedVid} />
+        </div>
+    )
+}
+```
+
+`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/bec8739ba1a589a7d2f64fff489e5c5a83204f35/src/app/record/page.js)*`
+
+### Adding a Logout button
+
+We should give the users a way to log out of the app. When a user logs out, we clear the user information from the local storage. We can create a logout button and add this functionality to both the `record` and `home` page.
+
+Add the following changes to `src/app/record/page.js` page. 
+
+```jsx
+// src/app/record/page.js
+// ...Rest of the code
+**const logout = () => {
+    window.localStorage.removeItem("video-sharing-app");
+    router.push("/login")
+}**
+
+return (
+    <div className={styles.mainWrap}>
+        **<div className={styles.buttonWrapper}>
+            <button onClick={logout}>Logout</button>
+        </div>**
+        <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+        <h1>Record Video</h1>
+        <Recorder onRecordedChunks={handleRecordedVid} />
+    </div>
+)
+```
+
+`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/record/page.js)*`
+
+Add the following changes to `src/app/page.js` page. 
+
+```jsx
+'use client'
+import { useState, useEffect } from "react";
+import { Client, fql } from "fauna";
+**import { useRouter } from 'next/navigation';**
+
+export default function Home() {
+
+  const router = useRouter();
+
+  //.. Rest of code
+
+  **const logout = () => {
+    window.localStorage.removeItem("video-sharing-app");
+    router.push("/login")
+  }**
+
+  return (
+    <>    
+      **<button onClick={logout}>Logout</button>**
+      <div>
+        Hello World
+      </div>
+    </>
+
+  );
+}
+```
+
+`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/page.js)*`
+
+In the next section, we will implement video sharing and video viewing. A user will be able to share videos and will be able to view videos that are shared with the user. We will review how Fauna's data relationships (i.e. one-to-many, one-to-one, etc.) work.

@@ -1,0 +1,260 @@
+# Implementing Video Recording
+
+In this section, we will implement
+
+1. The ability to create/record a new video,
+2. Save video metadata into our Fauna database, and
+3. Upload the video to Cloudflare R2.
+
+### Create a new video recording page
+
+Let's create a new page route in our application, `/record`. This new page will have all the video recording functionality. Create a new file `src/app/record/page.js` and add the following code. 
+
+```jsx
+//src/app/record/page.js 
+'use client'
+import Link from 'next/link';
+import styles from './recorder.module.css';
+
+export default function Record() {
+  const handleRecordedVid = async (blob) => {
+      // TODO: Store video metadata in Fauna
+      // TODO: Store video blob in Cloundflare R2 Storage
+  }
+  return (
+      <div className={styles.mainWrap}>
+          <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+          <h1>Record Video</h1>
+      </div>
+  )
+}
+```
+
+📖 Optional: You can add some CSS styles to this page component. Create a new file `src/app/record/recorder.module.css` and add CSS from [this link.](https://github.com/fauna-labs/video-sharing/blob/60215a7d2d436da13717b26b7d963e5ee14cee7b/src/app/record/recorder.module.css)
+
+### Add video recorder component
+
+We have created a video recorder component to record the webcam and screen. Create a new file `src/app/record/Recorder.js` and add all the code ***[from this link](https://github.com/fauna-labs/video-sharing/blob/8e27693c8de09392f19bb80b8d7c4a9cd54b449b/src/app/record/Recorder.js)***. 
+
+The recorder component itself is complicated, and demonstrating how it works internally is beyond the scope of this workshop. However, if you want to learn how it works, you can find more information in [this Stackoverflow thread](https://stackoverflow.com/questions/71557879/record-video-and-screen-together-and-overlay-with-javascript).
+
+Once you created the Recorder component add it to your record page. Make the following changes to `src/app/record/page.js` file.
+
+```jsx
+'use client'
+import Link from 'next/link';
+import styles from './recorder.module.css';
+import Recorder from './Recorder';
+
+export default function Record() {
+
+    const handleRecordedVid = async (blob) => {
+        console.log('===>', blob)
+        // TODO: Store video metadata in Fauna
+        // TODO: Store video blob in Cloundflare R2 Storage
+    }
+    return (
+        <div className={styles.mainWrap}>
+            <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+            <h1>Record Video</h1>
+            <Recorder onRecordedChunks={handleRecordedVid} />
+        </div>
+    )
+}
+```
+
+Next, try recording a video. When you stop recording the recorded video blob is sent to `handleRecordedVid` function of the page component.
+
+![Untitled](Implementing%20Video%20Recording%205a32026b9130442a92121d9376ed0aee/Untitled.png)
+
+### Making a Fauna entry after video is recorded
+
+When a video is recorded, we want to create a new document in the Video collection in Fauna. Make the following changes to the `src/app/record/page.js` file.
+
+```jsx
+'use client'
+import Link from 'next/link';
+import styles from './recorder.module.css';
+import Recorder from './Recorder';
+**import { Client, fql } from "fauna";**
+
+export default function Record() {
+
+    **const client = new Client({
+        secret: process.env.NEXT_PUBLIC_FAUNA_KEY,
+    });**
+
+    const handleRecordedVid = async (blob) => {
+        **console.log('--->', blob)
+        const newVid = await client.query(fql`
+          Video.create({
+            title: ${new Date().toISOString()}
+          })
+        `)
+
+        console.log('newVid', newVid)**
+    }
+    return (
+        <div className={styles.mainWrap}>
+            <Link href='/'><span className={styles.home}>🏠 Home</span></Link>
+            <h1>Record Video</h1>
+            <Recorder onRecordedChunks={handleRecordedVid} />
+        </div>
+    )
+}
+```
+
+`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/src/app/record/page.js)*`
+
+We configure the Fauna client here, and on the `handleRecordedVid` function, we make a database call to create a new video record in the Video collection. Next, we are going to make another call to Cloudflare R2 to store the blob itself. 
+
+## Uploading files to R2 storage with Cloudflare Worker
+
+### Configure Cloudflare worker
+
+We will use a Cloudflare worker function to upload/download files from R2. Run the follwoing command at the root of your project to create a new cloudflare worker backend.
+
+```bash
+npm create cloudflare@latest
+```
+
+Select the following options while creating the project
+
+```bash
+├ In which directory do you want to create your application?
+│ dir ./backend
+│
+├ What type of application do you want to create?
+│ type "Hello World" Worker
+│
+├ Do you want to use TypeScript?
+│ no typescript
+```
+
+Change directory to the `backend` folder and run the worker function locally to verify it is working as expected.
+
+```bash
+cd backend
+npm run start
+```
+
+Visit [http://127.0.0.1:8787/](http://127.0.0.1:8787/) and verify that you get a “hello world” message. 
+
+### Creating a new R2 bucket
+
+Head over to [https://dash.cloudflare.com/](https://dash.cloudflare.com/) and from the dashboard select R2. Then select *Create Bucket.* 
+
+![Untitled](Implementing%20Video%20Recording%205a32026b9130442a92121d9376ed0aee/Untitled%201.png)
+
+Give your bucket a name and then select Create. 
+
+![Untitled](Implementing%20Video%20Recording%205a32026b9130442a92121d9376ed0aee/Untitled%202.png)
+
+Back in your code open the `backend/wrangler.toml` file. Add the following lines to your `wrangler.toml` file. 
+
+```bash
+[[r2_buckets]]
+binding = "MY_BUCKET" # <~ valid JavaScript variable name
+bucket_name = "video-share" # <~ your bucket name
+```
+
+`bucket_name` should be the name of the bucket created in the previous step.
+
+Next, add the following code in the `backend/src/worker.js` file.
+
+```jsx
+// backend/src/worker.js
+export default {
+	async fetch(request, env) {
+	  const url = new URL(request.url);
+	  const key = url.pathname.slice(1);
+
+	  const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    };
+
+	  switch (request.method) {
+			case 'PUT':
+				await env.MY_BUCKET.put(key, request.body);
+				return new Response(`Put ${key} successfully!`, {
+					headers: corsHeaders,
+				});
+			case 'GET':
+				const object = await env.MY_BUCKET.get(key);
+
+				if (object === null) {
+					return new Response('Object Not Found', { status: 404, headers: corsHeaders });
+				}
+
+				const headers = new Headers();
+				object.writeHttpMetadata(headers);
+				headers.set('etag', object.httpEtag);
+				Object.assign(headers, corsHeaders);
+
+				return new Response(object.body, {
+					headers,
+				});
+			case 'DELETE':
+				await env.MY_BUCKET.delete(key);
+				return new Response('Deleted!', {
+					headers: corsHeaders,
+				});
+
+			default:
+				return new Response('Method Not Allowed', {
+				status: 405,
+				headers: {
+					Allow: 'PUT, GET, DELETE',
+					...corsHeaders,
+				},
+				});
+			}
+	},
+};
+```
+
+`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/backend/src/worker.js)*`
+
+In the code above, the worker function handles different HTTP requests. When we make a `PUT` request, the worker connects to the bucket and uploads the payload file. `GET` request retrieves a file from the bucket and `DELETE` request deletes the file with a given name from the bucket.
+
+### Deploy Cloudflare Worker
+
+Run the following command to deploy the worker to Cloudflare.
+
+```bash
+npm run deploy
+```
+
+Once it is deployed you will get a deployed URL something similar to the following. 
+
+```bash
+Published backend (3.87 sec)
+  https://backend.shadidhaque2014.workers.dev
+Current Deployment ID: ee0db600-f4f3-4c27-b1d7-e36063f4573b
+```
+
+You can test your Cloudflare worker function by uploading a dummy file. Run the following CURL command to upload a file called `test.txt`.
+
+`curl -X PUT --header --data-binary @test.txt [https://<your-worker-endpoint>/test.txt](https://backend.shadidhaque2014.workers.dev/test.txt)`
+
+We can now add this API call to our record page in the `handleRecordedVid` function. 
+
+```jsx
+// ...partials of src/app/[id]/page.js 
+
+// ...
+const handleRecordedVid = async (blob) => {
+    **await fetch(`https://backend.shadidhaque2014.workers.dev/${newVid.data.id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'video/webm'
+        },
+        body: blob
+    })**
+}
+```
+
+At this point, for each recording, a new document is created in the Fauna database's Video collection with video information, and the blob is uploaded to R2.
+The essential features of creating a video, storing it, and integrating the app with CloudFlare and Fauna are all there, but there’s still no way to verify which video belongs to what user, nor are video permissions yet to restrict which users can view it. We will restrict video access by implementing authentication in the next section.

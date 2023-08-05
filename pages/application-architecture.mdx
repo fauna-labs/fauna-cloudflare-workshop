@@ -1,0 +1,20 @@
+# Application Architecture
+
+Before we start, let's list the features our application will provide:
+
+1. User sign up
+2. User log in
+3. Record videos with multiple settings
+4. Share videos with other users
+
+We will be using Next.js for our framework of choice. 
+
+The following is the architecture flow for saving a new video in our application. 
+
+![Untitled](Application%20Architecture%20fed541774b184ee5b2d8287a743b91c7/Untitled.png)
+
+1. Using the web app, a user creates an account and authenticates.
+2. Authenticated users are able to record a new video. 
+3. When a user creates a new video, video metadata (date, length, etc.) is stored in the Fauna database, along with additional data elements such as who the creator or owner of the video is and which users have been granted access to view the video. 
+4. Fauna generates a video `id` and we use that unique `id` to save the video blob to R2 storage via a Cloudflare worker function.
+5.  Users can view their own videos and videos that are shared with them by others. With the Next.js web app, an API call to Cloudflare’s workers and R2 storage retrieves the corresponding video URLs to view in the app.

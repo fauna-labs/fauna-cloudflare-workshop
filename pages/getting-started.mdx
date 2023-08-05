@@ -1,0 +1,105 @@
+# Getting Started
+
+### Setting up a new Next.js project
+
+Set up a new Next.js project by running the following command.
+
+```bash
+npx create-next-app@latest
+```
+
+💡 We will use the new Next.js 13 folder structures and app router. You can choose to use TypeScript and TailwindCSS; however, we’ll stick with JavaScript for simplicity.
+
+I choose the following options 
+
+```jsx
+✔ Would you like to use TypeScript? … No
+✔ Would you like to use ESLint? … Yes
+✔ Would you like to use Tailwind CSS? … No
+✔ Would you like to use `src/` directory? … Yes
+✔ Would you like to use App Router? (recommended) … Yes
+✔ Would you like to customize the default import alias? … No
+```
+
+Next, install the fauna npm package by running the following command in your terminal. 
+
+```bash
+npm i fauna --save
+```
+
+### Fauna database configuration
+
+We’ll create a new Fauna database for this project. Head over to [dashboard.fauna.com](http://dashboard.fauna.com) and select create database.
+
+![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled.png)
+
+Give your database a name. Select a region group for your database. In my case, I selected the US. This creates a database with 3 replicas across the US.
+
+Fauna ensures that the data is always served from the user's nearest location for reduced latency. For instance, if a user's location is Iowa, Fauna will retrieve and and serve the data from the closest replica, which is in Ohio. In contrast, if a user requests data from California, it will serve the data from the California data center.
+
+Select *disable* for backups for now and select *create*. 
+
+![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%201.png)
+
+Once your database is created, create three collections called `User`, `Video` and `Permission`
+
+You can create a collection by selection the `+` icon in the left side menu.
+
+![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%202.png)
+
+![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%203.png)
+
+We need a secret key to connect to our database from the Next.js application. To create a new key navigate to the Fauna web shell and run the following code.
+
+```jsx
+Key.create({role: "server"})
+```
+
+ 
+
+![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%204.png)
+
+Save the generated secret. We will use this server key to connect to our database from the Next.js application. 
+
+Head back over to your Next.js application code. Add a new environment variable called `NEXT_PUBLIC_FAUNA_KEY` to your `.env` file. Add the generated secret as a value for the environment variable.
+
+```
+// .env
+NEXT_PUBLIC_FAUNA_KEY="fnAFJBauPOAASZ0PY_lQQhd1OqH-oPFAUql30MUV"
+```
+
+Next add the following code to your `page.js` file to verify you can connect to the database. 
+
+```jsx
+'use client'
+import { useState, useEffect } from "react";
+import { Client, fql } from "fauna";
+
+export default function Home() {
+
+  const client = new Client({
+    secret: process.env.NEXT_PUBLIC_FAUNA_KEY
+  });
+
+  useEffect(() => {
+    client.query(fql`
+      User.all()
+    `).then((response) => {
+      console.log('response', response.data.data)
+    })
+  }, []);
+
+  return (
+    <>    
+      <div>
+        Hello World
+      </div>
+    </>
+
+  );
+}
+```
+
+👩🏻‍💻 *link to [code](https://github.com/fauna-labs/video-sharing/blob/aee8cdd4d7d0f1da990213c7ce84860f041af6da/src/app/page.js)*
+
+Since we haven’t added any documents to the User collection, the response will be empty at this point.

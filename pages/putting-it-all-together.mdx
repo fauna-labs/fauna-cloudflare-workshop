@@ -1,0 +1,431 @@
+# Putting it all together
+
+### Display videos in homepage
+
+On the home page, authenticated users can view videos that are shared with them or videos that they created.
+
+The following FQL query fetches all the videos that are made by the current user or is shared with them.
+
+```jsx
+let user = User.byId("368374186628874313")
+let authoredVideos = Video.where(.author == user)
+let sharedWithUser = Permission.where(.user == user) {
+  video {
+    id,
+    title
+  }
+}
+
+let mergedResult = authoredVideos.concat(sharedWithUser)
+mergedResult
+```
+
+We will update the homepage to display this result. First, let’s add some more structure to the homepage. Add the following code to `src/app/page.js` file.
+
+```jsx
+'use client'
+import { useEffect, useState } from "react";
+import Link from 'next/link';
+import { Client, fql } from "fauna";
+import { useRouter } from 'next/navigation';
+import styles from  './page.module.css';
+
+export default function Home() {
+
+  const router = useRouter();
+  const [userInfo, setUserInfo] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true); // we're on the client, update the state
+    const data = localStorage?.getItem("video-sharing-app");
+    setUserInfo(data ? JSON.parse(data) : null);
+  }, []);
+
+  const client = new Client({
+    secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY
+  });
+
+  const logout = () => {
+    window.localStorage.removeItem("video-sharing-app");
+    router.push("/login")
+  }
+
+  return (
+    <>    
+      <div className={styles.pageContainer}>
+        {userInfo ? (
+          <>
+            <div className={styles.topbar}>
+              <span className={styles.h2}>
+                Hello 👋, {userInfo.email}
+              </span>
+              <Link href="/record" className={styles.link}>
+                <span >Record Video</span>
+              </Link>
+
+              <button onClick={logout} className={styles.logout}>log out?</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className={styles.h1}>Welcome to VidShare 📹</h1>
+            <p>Please Login or Signup to get started...</p>
+            <Link href="/login">
+              <button className={styles.button}>Login</button>
+            </Link>
+            <Link href="/signup">
+              <button className={styles.button}>Signup</button>
+            </Link>       
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+```
+
+We are now checking if the user is logged in, that is, we check the local storage for user information. If the user is not logged in, we show them options to either signup for an account or log in. Additionally we added some CSS styles to the page. You can copy the CSS from [this link](https://github.com/fauna-labs/video-sharing/blob/ee315c276f83769789ac793ce2787748bc5d55ff/src/app/page.module.css).
+
+`👩🏽‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/443ac4cd028bb54ca8d431dd7dce47236bfdb597/src/app/page.js)*`
+
+When the user is logged in we will make an FQL query to get all the videos shared with the user or authored by the user. We make the following code changes to achieve this.
+
+```jsx
+// src/app/page.js
+'use client'
+import { useEffect, useState } from "react";
+import Link from 'next/link';
+import { Client, fql } from "fauna";
+import { useRouter } from 'next/navigation';
+import VideoList from './VideoList';
+import styles from  './page.module.css';
+
+export default function Home() {
+
+  const router = useRouter();
+  const [userInfo, setUserInfo] = useState(null);
+  const [isClient, setIsClient] = useState(false);
+  **const [sharedVideos, setSharedVideos] = useState([]);
+  const [authoredVideos, setAuthoredVideos] = useState([]);**
+
+  **useEffect(() => {
+    setIsClient(true); // we're on the client, update the state
+    const data = localStorage?.getItem("video-sharing-app");
+    setUserInfo(data ? JSON.parse(data) : null);
+  }, []);**
+
+  const client = new Client({
+    secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY
+  });
+
+  **useEffect(() => {
+    client.query(fql`
+      let user = User.byId("368374186628874313")
+      let authoredVideos = Video.where(.author == user)
+      let sharedWithUser = Permission.where(.user == user) {
+        video {
+          id,
+          title
+        }
+      }
+      let result = {
+        shared_videoes: sharedWithUser,
+        authored_videos: authoredVideos
+      }
+      result
+    `).then((response) => {
+      setSharedVideos(response.data.shared_videoes.data.map((item) => item.video))
+      setAuthoredVideos(response.data.authored_videos.data)
+    }).catch((error) => {})
+  }, [userInfo]);**
+
+  const logout = () => {
+    window.localStorage.removeItem("video-sharing-app");
+    router.push("/login")
+  }
+
+  if (!isClient) {
+    return <div>Loading...</div>
+  }
+
+  return (
+    <>    
+      <div className={styles.pageContainer}>
+        {userInfo ? (
+          <>
+            <div className={styles.topbar}>
+              <span className={styles.h2}>
+                Hello 👋, {userInfo.email}
+              </span>
+              <Link href="/record" className={styles.link}>
+                <span >Record Video</span>
+              </Link>
+
+              <button onClick={logout} className={styles.logout}>log out?</button>
+            </div>
+            **<VideoList videos={authoredVideos} title="Your Videos" />
+            <VideoList videos={sharedVideos} title="Videos Shared With You" />**
+          </>
+        ) : (
+          <>
+            <h1 className={styles.h1}>Welcome to VidShare 📹</h1>
+            <p>Please Login or Signup to get started...</p>
+            <Link href="/login">
+              <button className={styles.button}>Login</button>
+            </Link>
+            <Link href="/signup">
+              <button className={styles.button}>Signup</button>
+            </Link>       
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+```
+
+We created a new `VideoList` component. Ensure you have a `VideoList.js` file in your app’s directory with the following content:
+
+```jsx
+// src/app/VideoList.js
+'use client'
+import Link from 'next/link';
+
+export default function VideoList({ title, videos }) {
+    return (
+        <div>
+            <h1>{title}</h1>
+            <div>
+                {videos.map((video) => (
+                    <div key={video.id}>
+                        <Link href={`/video/${video.id}`}>
+                            <span>{video.title}</span>
+                        </Link>
+                    </div>
+                ))
+                }
+            </div>
+        </div>
+    )
+}
+```
+
+### Implementing the video display page
+
+Let's create a page to display each video. Create a new file `src/app/video/[id]/page.js` and add the following code.
+
+```jsx
+// src/app/video/[id]/page.js
+'use client'
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from 'next/navigation';
+import { Client, fql } from "fauna";
+import styles from  './page.module.css';
+
+/** This component does the following:
+ * 1. Get video
+ * 2. Check if video owner
+ *  - if owner, show the video
+ *  - if not owner, check if video is shared with user
+ * 3. Check if video is shared with user
+ *  - if shared, show the video
+ *  - if not shared, show error message "You do not have permission to view this video"
+ */
+
+export default function VideoPage() {
+    const router = useRouter();
+    const { id } = useParams();
+    const userInfo = JSON.parse(localStorage.getItem("video-sharing-app"));
+    const client = new Client({
+        secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY
+    });
+    const [canSeeContent, setCanSeeContent] = useState(false);
+    const [video, setVideo] = useState(null);
+
+    if(!userInfo) {
+        return (
+            <div>
+                <p>Please Log In</p>
+                <button onClick={() => router.push("/login")}>Log In</button>
+            </div>
+        )
+    }
+
+    useEffect(() => {
+        videoVisibility();
+    }, [id]);
+
+    const videoVisibility = () => {
+        client.query(fql`
+            let video = Video.byId(${id})
+            let user = User.byId(${userInfo.id})
+            let permission = Permission.where(.user == user && .video == video)
+            
+            let result = {
+                video: video,
+                permission: permission,
+                is_owner: video.author == user
+            }
+
+            result
+        `).then((response) => {
+            console.log('response', response.data)
+            if (response.data.is_owner || response.data.permission.data.length > 0) {
+                setCanSeeContent(true)
+                setVideo(response.data.video)
+            }
+        })
+    };
+
+    if (canSeeContent) {
+        return (
+            <div className={styles.main}>
+                <h1>{video.title}</h1>
+                <video controls width="600px" height="300px" src={`https://backend.shadidhaque2014.workers.dev/${video.id}`} />
+            </div>
+        )
+    }
+    
+}
+```
+
+[`link to code`](https://github.com/fauna-labs/video-sharing/commit/44b798b6b6c05ea8fd23dd33fa48243b53aa9ee6)
+
+### Implementing the video sharing functionality
+
+Next, we make the following UI changes to allow video authors to share their videos with other users. We’ll ensure that the video share form is only available to the author of the video. If a user is not the video's author, then the user can not share that video.
+
+We make the following changes to `src/app/video/[id]/page.js` file.
+
+You can find the diff in the following github link.
+
+[https://github.com/fauna-labs/video-sharing/commit/108ad105d2288f9a957fa51b915f93d3e32d47f5](https://github.com/fauna-labs/video-sharing/commit/108ad105d2288f9a957fa51b915f93d3e32d47f5)
+
+The final code for the page.js file should look like the listing below.
+
+```jsx
+'use client'
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from 'next/navigation';
+import { Client, fql } from "fauna";
+import styles from  './page.module.css';
+
+/** This component does the following:
+ * 1. Get video
+ * 2. Check if video owner
+ *  - if owner, show the video
+ *  - if not owner, check if video is shared with user
+ * 3. Check if video is shared with user
+ *  - if shared, show the video
+ *  - if not shared, show error message "You do not have permission to view this video"
+ */
+
+export default function VideoPage() {
+    const router = useRouter();
+    const { id } = useParams();
+    const userInfo = JSON.parse(localStorage.getItem("video-sharing-app"));
+    const client = new Client({
+        secret: userInfo ? userInfo.key : process.env.NEXT_PUBLIC_FAUNA_KEY
+    });
+    const [canSeeContent, setCanSeeContent] = useState(false);
+    const [video, setVideo] = useState(null);
+    const [isOwner, setIsOwner] = useState(false);
+    const [email, setEmail] = useState("");
+
+    if(!userInfo) {
+        return (
+            <div>
+                <p>Please Log In</p>
+                <button onClick={() => router.push("/login")}>Log In</button>
+            </div>
+        )
+    }
+
+    useEffect(() => {
+        videoVisibility();
+    }, [id]);
+
+    const videoVisibility = () => {
+        client.query(fql`
+            let video = Video.byId(${id})
+            let user = User.byId(${userInfo.id})
+            let permission = Permission.where(.user == user && .video == video)
+            
+            let result = {
+                video: video,
+                permission: permission,
+                is_owner: video.author == user
+            }
+
+            result
+        `).then((response) => {
+            console.log('response', response.data)
+            if (response.data.is_owner || response.data.permission.data.length > 0) {
+                setCanSeeContent(true)
+                setVideo(response.data.video)
+                setIsOwner(response.data.is_owner)
+            }
+        })
+    };
+
+    const handleEmailChange = (e) => {
+        setEmail(e.target.value);
+    }
+
+    const handleShareFormSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await client.query(fql`
+                let video = Video.byId(${id})
+                let user = User.where(.email == ${email}).first()
+                Permission.create({
+                    user: user,
+                    video: video
+                })
+            `)
+            alert('Video shared successfully')
+            setEmail("")
+        } catch (error) {
+            alert('There was an error sharing your video')
+        }
+    }
+
+    if (canSeeContent) {
+        return (
+            <div className={styles.main}>
+                <h1>{video.title}</h1>
+                <video controls width="600px" height="300px" src={`https://backend.shadidhaque2014.workers.dev/${video.id}`} />
+                <hr />
+                {
+                    isOwner && (
+                        <div>
+                            <form onSubmit={handleShareFormSubmit}>
+                                <label htmlFor="email">Share with:</label> 
+                                <br />
+                                <input type="email" value={email} onChange={handleEmailChange} />
+                                <button type="submit">Share</button>
+                            </form>
+                        </div>
+                    )
+                }
+            </div>
+        )
+    }
+    
+}
+```
+
+### Deploy our Next.js app to Cloudflare Pages
+
+To deploy your site to Pages follow these steps:
+
+1. Log in to the [Cloudflare dashboard](https://dash.cloudflare.com/login) and select your account.
+2. In Account Home, select Workers & Pages > Create application > Pages > Connect to Git.
+3. Select the new GitHub repository that you created and, in the Set up builds and deployments section, select Next.js as your Framework preset. Your selection will provide the following information.
+
+| Configuration Option | Value |
+| ---------------------| -------|
+| Production branch    | main   |
+| Build command        | npx @cloudflare/next-on-pages@1 |
+| Build directory      | .vercel/output/static |
