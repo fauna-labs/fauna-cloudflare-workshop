@@ -77,6 +77,7 @@ export default {
   feedbackLink: () => {
     return (
       <>
+        <h4>Contributors</h4>
         <AuthorCard />
         <a style={{ fontSize: '16px', color: 'rgb(58,26,182)' }} href="https://github.com/fauna-labs" target="_blank">🧪 Fauna Labs</a>
         <br />
