@@ -58,7 +58,7 @@ export default function SignUp() {
 }
 ```
 
-`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/806a6a1bb279f227a91dbd7d38f82215f8f40393/src/app/signup/page.js)*`
+👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/806a6a1bb279f227a91dbd7d38f82215f8f40393/src/app/signup/page.js)*
 
 The code above presents a form to capture user’s email and password for a signup process. It uses Next.js's `useRouter` hook to navigate between pages, and React's `useState` hook to manage the state of email and password inputs.
 
@@ -116,7 +116,7 @@ Note that we are using the `Credentials.create` function inside our FQL block. T
 
 Try registering a new user and verify that the user is created in the User collection.
 
-`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/commit/101621508d9357024ef090dbe2153a8f91acd1d8)*`
+👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/commit/101621508d9357024ef090dbe2153a8f91acd1d8)*
 
 ### User Defined Function (UDF)
 
@@ -281,8 +281,6 @@ const handleSubmit = (e) => {
     })
   };
 ```
-
-`👩🏻‍💻` 
 
 Note that we are saving the secret that is returned after the user logs in. Fauna can identify a user based on this secret. If we want to make an authenticated request, we pass in this secret instead of the key saved in the environment variable `NEXT_PUBLIC_FAUNA_KEY`.
 
@@ -476,7 +474,7 @@ export default function Record() {
 }
 ```
 
-`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/bec8739ba1a589a7d2f64fff489e5c5a83204f35/src/app/record/page.js)*`
+👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/bec8739ba1a589a7d2f64fff489e5c5a83204f35/src/app/record/page.js)*
 
 ### Adding a Logout button
 
@@ -504,7 +502,7 @@ return (
 )
 ```
 
-`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/record/page.js)*`
+👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/record/page.js)*
 
 Add the following changes to `src/app/page.js` page. 
 
@@ -537,6 +535,6 @@ export default function Home() {
 }
 ```
 
-`👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/page.js)*`
+👩‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/d67d2f38603468872f3b9b00fbc856555bdafb32/src/app/page.js)*
 
 In the next section, we will implement video sharing and video viewing. A user will be able to share videos and will be able to view videos that are shared with the user. We will review how Fauna's data relationships (i.e. one-to-many, one-to-one, etc.) work.

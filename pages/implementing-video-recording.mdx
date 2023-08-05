@@ -104,7 +104,7 @@ export default function Record() {
 }
 ```
 
-`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/src/app/record/page.js)*`
+👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/src/app/record/page.js)*
 
 We configure the Fauna client here, and on the `handleRecordedVid` function, we make a database call to create a new video record in the Video collection. Next, we are going to make another call to Cloudflare R2 to store the blob itself. 
 
@@ -215,7 +215,7 @@ export default {
 };
 ```
 
-`👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/backend/src/worker.js)*`
+👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/backend/src/worker.js)*
 
 In the code above, the worker function handles different HTTP requests. When we make a `PUT` request, the worker connects to the bucket and uploads the payload file. `GET` request retrieves a file from the bucket and `DELETE` request deletes the file with a given name from the bucket.
 
