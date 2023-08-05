@@ -66,7 +66,7 @@ The code above presents a form to capture user’s email and password for a sign
 
 Run your application with `npm run dev` command. Visit `[http://localhost:3000/signup](http://localhost:3000/signup)` and make sure the signup page is displaying as expected. 
 
-![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled.png)
+![Signup](https://workshop-shadid.s3.amazonaws.com/cffqlx/1-user-authentification-signup.png)
 
 Next, add the Fauna configuration to this component. 
 
@@ -137,7 +137,7 @@ Function.create({
 })
 ```
 
-![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%201.png)
+![Function creation](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-user-authentification-function.png)
 
 Notice, a new function is added in the resources tab in the left menu.
 
@@ -221,7 +221,7 @@ The code above creates a new Next.js page route for login. The login page presen
 
 Make sure your application is running. Visit [http://localhost:3000/login](http://localhost:3000/login) to verify the login page is displaying as expected.
 
-![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%202.png)
+![Login](https://workshop-shadid.s3.amazonaws.com/cffqlx/3-user-authentification-login.png)
 
 Next, let's implement the `handleSubmit` functionality.
 
@@ -290,7 +290,7 @@ Try logging in with a user to make sure that the user information is saved in th
 
  
 
-![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%203.png)
+![Local storage](https://workshop-shadid.s3.amazonaws.com/cffqlx/4-user-authentification-local-storage.png)
 
 ### Restricting Video Access to Only Authenticated Users
 
@@ -340,7 +340,7 @@ Copy this key and replace the old server key in `NEXT_PUBLIC_FAUNA_KEY` environm
 
 Navigate to [`http://localhost:3000/record`](http://localhost:3000/record) and try creating a new video. Open the network tab in your browser and notice that the request to our Fauna database now returns an error. If we investigate this further we’ll notice that it returns an error: stating there are `Insufficient privileges` to perform the operation.
 
-![Untitled](User%20Authentication%20d4e8930cd8934b6aada3022e9f8c7d54/Untitled%204.png)
+![Insufficient privileges](https://workshop-shadid.s3.amazonaws.com/cffqlx/5-user-authentification-insufficient-privilege.png)
 
 This is expected because the API request uses a key associated with the `NotLoggedIn` role, and that role doesn’t have privileges to create a video.
 Open the `src/app/record/page.js` file and change the Fauna client initialization to use the logged-in user’s key from local storage. Update the code as follows.

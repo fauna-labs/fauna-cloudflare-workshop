@@ -31,7 +31,7 @@ npm i fauna --save
 
 We’ll create a new Fauna database for this project. Head over to [dashboard.fauna.com](http://dashboard.fauna.com) and select create database.
 
-![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled.png)
+![Create database](https://workshop-shadid.s3.amazonaws.com/cffqlx/1-getting-started-create-database.png)
 
 Give your database a name. Select a region group for your database. In my case, I selected the US. This creates a database with 3 replicas across the US.
 
@@ -39,15 +39,15 @@ Fauna ensures that the data is always served from the user's nearest location fo
 
 Select *disable* for backups for now and select *create*. 
 
-![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%201.png)
+![Create database](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-getting-started-create-database.png)
 
 Once your database is created, create three collections called `User`, `Video` and `Permission`
 
 You can create a collection by selection the `+` icon in the left side menu.
 
-![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%202.png)
+![Create collections](https://workshop-shadid.s3.amazonaws.com/cffqlx/3-getting-started-create-collections.png)
 
-![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%203.png)
+![Create collections](https://workshop-shadid.s3.amazonaws.com/cffqlx/4-getting-started-create-collections.png)
 
 We need a secret key to connect to our database from the Next.js application. To create a new key navigate to the Fauna web shell and run the following code.
 
@@ -57,7 +57,7 @@ Key.create({role: "server"})
 
  
 
-![Untitled](Getting%20Started%209548dffddc4f4d5194591471673ac9cb/Untitled%204.png)
+![Getting secret key](https://workshop-shadid.s3.amazonaws.com/cffqlx/5-getting-started-get-key.png)
 
 Save the generated secret. We will use this server key to connect to our database from the Next.js application. 
 
