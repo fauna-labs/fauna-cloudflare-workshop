@@ -1,14 +1,14 @@
 # Implementing Video Recording
 
-In this section, we will implement
+In this section, we will implement:
 
-1. The ability to create/record a new video,
-2. Save video metadata into our Fauna database, and
-3. Upload the video to Cloudflare R2.
+1. The ability to create/record a new video
+2. Save video metadata into our Fauna database
+3. Upload the video to Cloudflare R2
 
 ### Create a new video recording page
 
-Let's create a new page route in our application, `/record`. This new page will have all the video recording functionality. Create a new file `src/app/record/page.js` and add the following code. 
+Let's create a new page route in our application, `/record`. This new page will have all the video recording functionality. Create a new file `src/app/record/page.js` and add the following code: 
 
 ```jsx
 //src/app/record/page.js 
@@ -112,7 +112,7 @@ We configure the Fauna client here, and on the `handleRecordedVid` function, we 
 
 ### Configure Cloudflare worker
 
-We will use a Cloudflare worker function to upload/download files from R2. Run the follwoing command at the root of your project to create a new cloudflare worker backend.
+We will use a Cloudflare worker function to upload/download files from R2. Run the follwoing command at the root of your project to create a new Cloudflare worker backend.
 
 ```bash
 npm create cloudflare@latest
@@ -257,4 +257,4 @@ const handleRecordedVid = async (blob) => {
 ```
 
 At this point, for each recording, a new document is created in the Fauna database's Video collection with video information, and the blob is uploaded to R2.
-The essential features of creating a video, storing it, and integrating the app with CloudFlare and Fauna are all there, but there’s still no way to verify which video belongs to what user, nor are video permissions yet to restrict which users can view it. We will restrict video access by implementing authentication in the next section.
+The essential features of creating a video, storing it, and integrating the app with CloudFlare and Fauna are all there, but there’s still no way to verify which video belongs to what user, nor are video permissions yet able to restrict which users can view it. We will restrict video access by implementing authentication in the next section.

@@ -5,7 +5,7 @@ import GA from '../components/GA';
 
 # Building globally distributed apps with Cloudflare and Fauna
 
-This self-paced workshop will demonstrate building a globally distributed application using Cloudflare and Fauna, deployed in multiple geographic regions. Our application will be a minimalist version of a video-sharing application, mimicking the popular app Loom or Dropbox Capture. To do so, this workshop will guide you through the following topics: 
+This self-paced workshop will demonstrate building a globally distributed application using Cloudflare and Fauna, deployed in multiple geographic regions. Our application will be a minimalist version of a video-sharing application, mimicking the popular apps Loom or Dropbox Capture. To do so, this workshop will guide you through the following topics:
 
 1. Build and deploy a Next.js application with Cloudflare Pages, hosted on Cloudflare’s global edge network.
 2. Demonstrate Fauna's capability as a globally distributed database and how it enables quick data access from any location.
@@ -22,11 +22,11 @@ The only prerequisites to complete this workshop are some experience with **Java
 
 ## Why Fauna and Cloudflare
 
-You may be wondering why you should choose to build your application with this particular stack of tools. This technology stack is well suited for quickly building scalable applications: 
+You may be wondering why you should choose to build your application with this particular stack of tools. There are a numbers of reasons which all come down to the fact that this technology stack is well suited for quickly building scalable applications by: 
 
-1. Take advantage of serverless computing to build and scale applications fast.
-2. Deliver a low-latency user experience to all your customers across different global locations.
-3. Dedicate more engineering time and resources to delivering features rather than spending time figuring out how to scale and manage application and database servers, which arguably is undifferentiated work. 
+1. Taking advantage of serverless computing to build and scale applications fast.
+2. Delivering a low-latency user experience to all of your customers across different global locations.
+3. Dedicating more engineering time and resources to deliver features rather than spending time figuring out how to scale and manage application and database servers, which arguably is undifferentiated work.
 
 ## Why use Cloudflare Workers/Pages function
 
@@ -36,13 +36,13 @@ You may benefit from Smart Placement if you are making multiple round trips to a
 
 ## Why Fauna
 
-Fauna is a serverless and globally distributed database. It automatically replicates your data in multiple locations worldwide. This means that when a user requests your app, the data can be fetched from the nearest geographic copy, reducing the time it takes to retrieve the data and send it back to the user. 
+Fauna is a distributed relational database with a document data model delivered as a cloud API. It offers advanced querying capabilities, robust consistency guarantees, and comprehensive support for data operations. It automatically replicates your data in multiple locations worldwide. This means that when a user requests your app, the data can be fetched from the nearest geographic copy, reducing the time it takes to retrieve the data and send it back to the user. 
 
 Similar to Cloudflare’s smart placement Fauna uses [intelligent request routing](https://fauna.com/blog/global-applications), which fetches or writes data to the nearest replica without developers having to specify which replica to use. 
 
 ## Why Cloudflare R2
 
-Cloudflare R2 Storage allows you to store your unstructured data (blob) nearest to your customers, reducing latency. 
+Cloudflare R2 Storage allows you to store your unstructured data (blob) nearest to your customers, reducing latency.There are no egress fees in R2, which can unlock some very neat use cases. 
 
 [Application Architecture](/application-architecture)
 
