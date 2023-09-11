@@ -1,105 +1,224 @@
-# Getting Started
+# Set up the Project
 
-### Setting up a new Next.js project
+In this section you create the initial Next.js project directory, configure a
+Fauna database, and connect your application to the database. Before you begin
+make sure you have installed the [Node Package
+Manager](https://nodejs.org/en/download) (npm) in your local machine
+environment. Also, the procedures on this page assume you have already [created
+a Fauna dashboard account](https://dashboard.fauna.com/login).
 
-Set up a new Next.js project by running the following command.
 
-```bash
-npx create-next-app@latest
-```
+## Initialize the project.
 
-💡 We will use the new Next.js 13 folder structures and app router. You can choose to use TypeScript and TailwindCSS; however, we’ll stick with JavaScript for simplicity.
+Open a terminal in your local environment and do the following:
 
-I choose the following options 
+1. Set up a new Next.js project.
 
-```jsx
-✔ Would you like to use TypeScript? … No
-✔ Would you like to use ESLint? … Yes
-✔ Would you like to use Tailwind CSS? … No
-✔ Would you like to use `src/` directory? … Yes
-✔ Would you like to use App Router? (recommended) … Yes
-✔ Would you like to customize the default import alias? … No
-```
+    ```bash
+    npx create-next-app@latest
+    ```
 
-Next, install the fauna npm package by running the following command in your terminal. 
+    This launches an interactive project builder.
 
-```bash
-npm i fauna --save
-```
+2. Name your project `video-sharing` or something similar.
 
-### Fauna database configuration
 
-We’ll create a new Fauna database for this project. Head over to [dashboard.fauna.com](http://dashboard.fauna.com) and select create database.
+    ```jsx
+    ✔ What is your project named? … video-sharing
+    ```
 
-![Create database](https://workshop-shadid.s3.amazonaws.com/cffqlx/1-getting-started-create-database.png)
+3. Choose the following options:
 
-Give your database a name. Select a region group for your database. In my case, I selected the US. This creates a database with 3 replicas across the US.
+    ```jsx
+    ✔ Would you like to use TypeScript? … No
+    ✔ Would you like to use ESLint? …  Yes
+    ✔ Would you like to use Tailwind CSS? … No
+    ✔ Would you like to use `src/` directory? … Yes
+    ✔ Would you like to use App Router? (recommended) … Yes
+    ✔ Would you like to customize the default import alias? … No
+    Creating a new Next.js app in /Users/ma/test/video-sharing.
 
-Fauna ensures that the data is always served from the user's nearest location for reduced latency. For instance, if a user's location is Iowa, Fauna will retrieve and serve the data from the closest replica, which is in Ohio. In contrast, if a user requests data from California, it will serve the data from the California data center.
+    Using npm.
+    ...
 
-Select *disable* for backups for now and select *create*. 
+    Success! Created video-sharing at /Users/ma/test/video-sharing
 
-![Create database](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-getting-started-create-database.png)
+    ```
 
-Once your database is created, create three collections called `User`, `Video` and `Permission`
+    This workshop uses the new Next.js 13 folder structures and app router. It
+    also sticks with JavaScript for simplicity.
 
-You can create a collection by selection the `+` icon in the left side menu.
+3. Change directory in your `video-sharing` project directory.
 
-![Create collections](https://workshop-shadid.s3.amazonaws.com/cffqlx/3-getting-started-create-collections.png)
+    ```bash
+    cd video-sharing/
+    ```
 
-![Create collections](https://workshop-shadid.s3.amazonaws.com/cffqlx/4-getting-started-create-collections.png)
+3. Install the `fauna` npm package by running the following command in your terminal.
 
-We need a secret key to connect to our database from the Next.js application. To create a new key navigate to the Fauna web shell and run the following code.
+    ```bash
+    npm i fauna --save
+    ```
 
-```jsx
-Key.create({role: "server"})
-```
+4. Verify you have completed the setup correctly by starting the Next.js template app.
 
- 
+    ```bash
+    npm run dev
+    ```
+    This should start a server running at `http://localhost:3000` in your
+    environment.
 
-![Getting secret key](https://workshop-shadid.s3.amazonaws.com/cffqlx/5-getting-started-get-key.png)
+   If for some reason the server does not start, retrace and make sure you
+   followed this procedure accurately. If you still have problems, please ask
+   for help on the [Fauna Community](https://fauna.com/community).
 
-Save the generated secret. We will use this server key to connect to our database from the Next.js application. 
+6. Use `CTRL-C` in your terminal to stop the server process you started.
 
-Head back over to your Next.js application code. Add a new environment variable called `NEXT_PUBLIC_FAUNA_KEY` to your `.env` file. Add the generated secret as a value for the environment variable.
+## Create a Fauna database
 
-```
-// .env
-NEXT_PUBLIC_FAUNA_KEY="fnAFJBauPOAASZ0PY_lQQhd1OqH-oPFAUql30MUV"
-```
+In this procedure, you create a new Fauna database.
 
-Next add the following code to your `page.js` file to verify you can connect to the database. 
+1. Login into the [dashboard.fauna.com](http://dashboard.fauna.com).
+2. Select **CREATE DATABASE**.
 
-```jsx
-'use client'
-import { useState, useEffect } from "react";
-import { Client, fql } from "fauna";
+    ![Create
+    database](https://workshop-shadid.s3.amazonaws.com/cffqlx/1-getting-started-create-database.png)
 
-export default function Home() {
+3. Complete the dialog:
 
-  const client = new Client({
-    secret: process.env.NEXT_PUBLIC_FAUNA_KEY
-  });
+    - Give your database a name.
+    - Select a region group for your database.
 
-  useEffect(() => {
-    client.query(fql`
-      User.all()
-    `).then((response) => {
-      console.log('response', response.data.data)
-    })
-  }, []);
+        If you select the US, Fauna creates a database with 3 replicas across
+        the US. Fauna ensures that the data is always served from the user's
+        nearest location for reduced latency. For instance, if a user's
+        location is Iowa, Fauna retrieves and serves the data from the center.
+        closest replica, which is in Ohio. If a user is in California, Fauna
+        serves data from the California data
 
-  return (
-    <>    
-      <div>
-        Hello World
-      </div>
-    </>
+    - Leave **Backups** disabled for backups.
 
-  );
-}
-```
+4. Press **CREATE**.
 
-👩🏻‍💻 *link to [code](https://github.com/fauna-labs/video-sharing/blob/aee8cdd4d7d0f1da990213c7ce84860f041af6da/src/app/page.js)*
+    ![Create
+        database](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-getting-started-create-database.png)
 
-Since we haven’t added any documents to the User collection, the response will be empty at this point.
+5. Open you database by selecting it from the dashboard.
+
+    The system displays the database *Explorer* and shell.
+
+6. Look for the **CREATE COLLECTION** button in the lower left panel.
+
+    You can also create a collection by entering queries in the dashboard
+    shell.
+
+7. Create three collections named `User`, `Video` and `Permission`.
+
+   The application relies on these collection names, so do not change them.
+       ![Create
+      collections](https://workshop-shadid.s3.amazonaws.com/cffqlx/4-getting-started-create-collections.png)
+
+   You can also create a collection by entering this query in the Fauna
+       shell.
+
+        ```bash
+        Collection.create({ name: "Video" })
+        ```
+    When you are done, you should see the three collections in the lower left,
+      panel of the **Explorer**.
+
+8.  Create a key you can use to connect the application to your database by
+       entering the following in the Fauna web shell:
+
+     ```jsx
+    Key.create({role: "server"})
+    ```
+
+        ![Getting secret
+      key](https://workshop-shadid.s3.amazonaws.com/cffqlx/5-getting-started-get-key.png)
+
+        **NOTE**: At creation is the only time Fauna displays the `secret`
+      field. The value in this field is equivalent to a password. Fauna cannot
+      recover a secret that is discarded or lost.
+
+9.  Copy and save the generated secret to a safe place.
+
+## Connect the Project to Fauna
+
+In a terminal window in your local environment, change into your
+application project directory. Then, do the following:
+
+1. Create a .env file in the root of your project.
+
+    ```bash
+    touch .env
+    ```
+1. Open the file and create an environment variable for the key secret you created in your database.
+
+      ```
+      // .env
+      NEXT_PUBLIC_FAUNA_KEY="your-key-here"
+      ```
+1. Save and close the `.env` file.
+
+1. Open the `src/app/page.js` file for editing.
+
+1. Replace the contents of the file with the following:
+
+    ```jsx
+    'use client'
+    import { useState, useEffect } from "react";
+    import { Client, fql } from "fauna";
+
+    export default function Home() {
+
+      const client = new Client({
+        secret: process.env.NEXT_PUBLIC_FAUNA_KEY
+      });
+
+      useEffect(() => {
+        client.query(fql`
+          User.all()
+        `).then((response) => {
+          console.log('response', response.data.data)
+        })
+      }, []);
+
+      return (
+        <>
+          <div>
+            Hello World
+          </div>
+        </>
+
+      );
+    }
+    ```
+
+    👩🏻‍💻 *link to
+    [code](https://github.com/fauna-labs/video-sharing/blob/aee8cdd4d7d0f1da990213c7ce84860f041af6da/src/app/page.js)*
+
+    This code replaces the Next.js template content with a simple hello world.
+    It also adds a query to list the contents of the `User` collection you
+    created in your database.
+
+1. Save and close the `src/app/page.js` file.
+
+1. Start the app to see your changes.
+    ```bash
+
+    npm run dev
+    ```
+
+    This should start a server running at `http://localhost:3000` in your
+    environment.
+
+1. Verify you see the `Hello World` text in place of the Next.js template text.
+
+1. Start the [Chrome Developer
+   Tools](https://developer.chrome.com/docs/devtools/overview/) in your browser
+   and bring up the **Console**.
+
+   You find an empty query `response` in the log. This happens because the
+   `User` collection is empty at this point.
+

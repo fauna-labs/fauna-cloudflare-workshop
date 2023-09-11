@@ -1,19 +1,73 @@
 # Application Architecture
 
-Before we start, let's list the features our application will provide:
+The Fauna and Cloudflare technology stack is well suited for quickly building
+scalable applications. Using this stack you can:
 
-1. User sign up
-2. User log in
-3. Record videos with multiple settings
-4. Share videos with other users
+- Take advantage of serverless computing to build and scale applications fast.
+- Deliver a low-latency user experience to customers across different global locations.
+- Decrease time spent scaling and managing application and database servers.
+- Increase the time and resources you use to deliver application features.
 
-We will be using Next.js for our framework of choice. 
-The following is the architecture flow for saving a new video in our application. 
+
+## Why Fauna
+
+Fauna is a distributed relational database with a document data model delivered
+as a cloud API. It offers advanced querying capabilities, robust consistency
+guarantees, and comprehensive support for data operations. Fauna automatically
+replicates your data in multiple locations worldwide. Fauna uses [intelligent
+request routing](https://fauna.com/blog/global-applications), which fetches or
+writes data to the nearest replica without developers having to specify which
+replica to use.
+
+When a user interacts with a Fauna-backed application, intelligent routing
+ensures that user data is fetched from the geographic copy nearest to the user.
+The result is less time to retrieve or send data and an improved user
+experience.
+
+## Why Cloudflare
+
+Cloudflare [Workers](https://developers.cloudflare.com/workers/) and [Pages
+Functions](https://developers.cloudflare.com/pages/platform/functions/) by
+default are invoked in a data center closest to where the request was received.
+
+If you are running back-end logic in a Worker, it may be more performant to run
+that Worker closer to your back-end infrastructure rather than the end user.
+Cloudflare's **[Smart
+Placement](https://developers.cloudflare.com/workers/configuration/smart-placement/)**
+feature automatically places your workloads in an optimal location that
+minimizes latency and speeds up your applications. You may benefit from Smart
+Placement if you are making multiple round trips to a centralized database, API
+or origin server in a Worker.
+
+Cloudflare R2 Storage stores your unstructured data (blob) nearest to your
+customers, reducing latency. There are no egress fees in R2, which can unlock
+some very neat use cases.
+
+## The Application Flow
+
+The video share application you will build has these functions:
+
+- User signup.
+- User login.
+- Record videos with multiple settings.
+- Share videos with other users.
+- View videos created or shared.
+
+The following is the architecture flow for saving a new video in the
+application.
 
 ![application-architecture](https://workshop-shadid.s3.amazonaws.com/cffqlx/application-architecture.png)
 
-1. Using the web app, a user creates an account and authenticates.
-2. Authenticated users are able to record a new video. 
-3. When a user creates a new video, video metadata (date, length, etc.) is stored in the Fauna database, along with additional data elements such as who the creator or owner of the video is and which users have been granted access to view the video. 
-4. Fauna generates a video `id` and we use that unique `id` to save the video blob to R2 storage via a Cloudflare worker function.
-5.  Users can view their own videos and videos that are shared with them by others. With the Next.js web app, an API call to Cloudflare’s workers and R2 storage retrieves the corresponding video URLs to view in the app.
+1. A user creates an account and authenticates.
+2. The user records a new video.
+3. The application stores its data in the Fauna database:
+    - the video metadata such as date, length, and so forth.
+    - the creator or owner of the video
+    - a list of users granted access to view the video
+
+4. Fauna storage generates a video `id` and a Cloudflare worker function saves
+   `id` with the video blob to R2 storage.
+
+5. When a user later wants to view their video or one shared with them, an API call to Cloudflare’s workers retrieves the corresponding
+    video from storage.
+

@@ -1,0 +1,239 @@
+# Set up Cloudflare Storage
+
+In this section, you use your [Cloudflare
+account](https://dash.cloudflare.com/login) to set up a Cloudflare R2 storage
+bucket. This bucket will hold the videos added by the applications users.
+
+## Create the Cloudflare Storage
+
+1. Log into the [CloudFlare dashboard](https://dash.cloudflare.com/)
+1. Select the **R2** option.
+
+	![Create bucket](https://workshop-shadid.s3.amazonaws.com/cffqlx/2-implementing-video-recording-create-bucket.png)
+
+1. Click the **Create Bucket** button.
+
+   The system displays the **Create a bucket** dialog.
+
+2. Name your bucket `videostore` and click **Create bucket**.
+
+![Creating
+bucket](https://workshop-shadid.s3.amazonaws.com/cffqlx/3-implementing-video-recording-creating-bucket.png)
+
+
+## Configure a Cloudflare Worker
+
+The application uses a Cloudflare worker function to upload/download files from
+R2. Open a terminal on your local machine and do the following:
+
+1. Change directory to the root of your project.
+1. Launch interactive command to add a Cloudflare worker backend.
+
+	```bash
+	npm create cloudflare@latest
+	```
+
+3. Select the following options from the command:
+
+		```bash
+		Create an application with Cloudflare Step 1 of 3
+		│
+		├ In which directory do you want to create your application?
+		│ dir ./backend
+		│
+		├ What type of application do you want to create?
+		│ type "Hello World" Worker
+		│
+		├ Do you want to use TypeScript?
+		│ no typescript
+		│
+		├ Copying files from "hello-world" template
+		│
+		├ Do you want to use TypeScript?
+		│ no typescript
+		│
+		├ Retrieving current workerd compatibility date
+		│ compatibility date 2023-09-04
+		│
+		╰ Application created
+
+		╭ Installing dependencies Step 2 of 3
+		│
+		├ Installing dependencies
+		│ installed via `npm install`
+		│
+		├ Committing new files
+		│ git commit
+		│
+		╰ Dependencies Installed
+
+		╭ Deploy with Cloudflare Step 3 of 3
+		│
+		├ Do you want to deploy your application?
+		│ yes deploy via `npm run deploy`
+		│
+		├ Logging into Cloudflare checking authentication status
+		│ logged in
+		│
+		├ Selecting Cloudflare account retrieving accounts
+		│ account Mary.anthony@fauna.com's Account
+		│
+		├ Deploying your application
+		│ deployed via `npm run deploy`
+		│
+		├  SUCCESS  View your deployed application at https://backend.maryvide.workers.dev
+		│
+		│ ...
+		```
+
+1. Change into the `backend` directory.
+
+1. Run the worker function **locally** to verify it is working as expected.
+
+	```bash
+	npm run start
+
+	> backend@0.0.0 start
+	> wrangler dev
+
+	⛅️ wrangler 3.7.0
+	------------------
+	wrangler dev now uses local mode by default, powered by 🔥 Miniflare and 👷 workerd.
+	To run an edge preview session for your Worker, use wrangler dev --remote
+	⎔ Starting local server...
+	[mf:inf] Ready on http://0.0.0.0:8787
+    [mf:inf] - http://10.0.0.36:8787
+	[mf:inf] GET / 200 OK (5ms)
+	[mf:inf] GET /favicon.ico 200 OK (0ms)
+	```
+1.  Open a browser to visit [http://0.0.0.0:8787](http://0.0.0.0:8787) and
+    verify that you get a “hello world” message.
+
+1. Press `x` to stop the server.
+
+## Configure the Bucket Backend
+
+1. In your project, open the `backend/wrangler.toml` file.
+1. Locate the `# Bind an R2 Bucket` section.
+1. Uncomment the lines and add your bucket information.
+
+	```bash
+	[[r2_buckets]]
+	binding = "MY_BUCKET"
+	bucket_name = "videostore"
+	```
+
+	The `binding` value should be a valid Javscript variable name, in this case
+	`MY_BUCKET`. The `bucket_name` value should be the bucket name created in
+	the previous procedure.
+
+1. Save and close the `wrangler.toml` file.
+
+1. Open the `backend/src/index.js` file and add the following code.
+
+	```jsx
+	// backend/src/index.js
+	export default {
+		async fetch(request, env) {
+		const url = new URL(request.url);
+		const key = url.pathname.slice(1);
+
+		const corsHeaders = {
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
+		'Access-Control-Allow-Headers': '*',
+		};
+
+		switch (request.method) {
+				case 'PUT':
+					await env.MY_BUCKET.put(key, request.body);
+					return new Response(`Put ${key} successfully!`, {
+						headers: corsHeaders,
+					});
+				case 'GET':
+					const object = await env.MY_BUCKET.get(key);
+
+					if (object === null) {
+						return new Response('Object Not Found', { status: 404, headers: corsHeaders });
+					}
+
+					const headers = new Headers();
+					object.writeHttpMetadata(headers);
+					headers.set('etag', object.httpEtag);
+					Object.assign(headers, corsHeaders);
+
+					return new Response(object.body, {
+						headers,
+					});
+				case 'DELETE':
+					await env.MY_BUCKET.delete(key);
+					return new Response('Deleted!', {
+						headers: corsHeaders,
+					});
+
+				default:
+					return new Response('Method Not Allowed', {
+					status: 405,
+					headers: {
+						Allow: 'PUT, GET, DELETE',
+						...corsHeaders,
+					},
+					});
+				}
+		},
+	};
+	```
+
+👩🏻‍💻 *[link to code](https://github.com/fauna-labs/video-sharing/blob/4d87fddef72073291542b763f939e2a14e03f25c/backend/src/worker.js)*
+
+In this code, the worker function handles different HTTP requests. When a `PUT`
+request is made, the worker connects to the bucket and uploads the payload
+file. A `GET` request retrieves a file from the bucket and `DELETE` request
+deletes the file with a given name from the bucket.
+
+## Deploy and Test the Worker
+
+1. Change to the `backend` directory.
+
+1. Run the following command to deploy the worker to Cloudflare.
+
+	```bash
+	npm run deploy
+	```
+
+   After a successful, deploy you will get a deployed URL something similar to the following.
+
+	```bash
+	 ⛅️ wrangler 3.7.0
+	------------------
+	Your worker has access to the following bindings:
+	- R2 Buckets:
+	- MY_BUCKET: videostore
+	Total Upload: 1.38 KiB / gzip: 0.57 KiB
+	Uploaded backend (0.97 sec)
+	Published backend (0.24 sec)
+	https://backend.maryvide.workers.dev
+	Current Deployment ID: ea3fb914-f11d-41af-a581-d4066ab8acc2
+	```
+
+	Your deployment URL and ID will be different.
+
+1. Save the URL and ID information in a location you can refer to later.
+
+1. In the current directory, create a file you can test your work with.
+
+	```bash
+	date > test.txt
+	```
+
+1. Run the following CURL command to upload your `test.txt` file.
+
+	 `curl -X PUT -H "Content-Type: application/json" --data-binary @test.txt https://backend.maryvide.workers.dev/test.txt`
+
+
+	Make sure to change the deployment URL to yours. If the command is
+	successful, you should see the following message:
+
+	`Put test.txt successfully!`
+
+1. Open Cloudflare dashboard, you should see your `test.txt` upload in your bucket.

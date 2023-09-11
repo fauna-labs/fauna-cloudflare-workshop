@@ -1,9 +1,10 @@
 {
   "index": "Introduction",
   "application-architecture": "Application Architecture",
-  "getting-started": "Getting Started",
-  "implementing-video-recording": "Implementing Video Recording",
-  "user-authentication": "User Authentication",
-  "data-relationships": "Data Relationships",
-  "putting-it-all-together": "Putting It All Together"
+  "getting-started": "Set up the Project",
+  "cloudflare": "Set up Cloudflare Storage",
+  "implementing-video-recording": "Implement Video Recording",
+  "user-authentication": "Authenticate and Authorize",
+  "data-relationships": "Add Sharing Controls",
+  "putting-it-all-together": "Learning More"
 }
